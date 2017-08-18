@@ -2,8 +2,8 @@
 
 Certificate monitoring daemon that :
 - checks for certificate expiration
-- generate missing certificates based on configuration
-- execute a command when certificate is renewed (ex: reload a service like
+- generates missing certificates based on configuration
+- executes a command when certificate is renewed (ex: reload a service like
   Apache)
 
 The certificate backend used is Hashicorp Vault.
