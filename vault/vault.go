@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 )
 
 type CertResponse struct {
@@ -23,10 +24,10 @@ type CertRequest struct {
 	AlternateNames string `json:"alt_names"`
 }
 
-type Config struct {
-	BaseUrl   string
-	LoginPath string
-	CertPath  string
+type Client struct {
+	BaseUrl   url.URL
+	LoginPath url.URL
+	CertPath  url.URL
 	RoleId    string
 	SecretId  string
 }
@@ -43,11 +44,11 @@ type loginResponse struct {
 	Errors []string `json:"errors"`
 }
 
-func (config Config) refreshToken() (string, error) {
+func (client Client) refreshToken() (string, error) {
 	var message loginResponse
 	var token string
 
-	loginInfo := loginRequest{config.RoleId, config.SecretId}
+	loginInfo := loginRequest{client.RoleId, client.SecretId}
 
 	loginPayload, err := json.Marshal(loginInfo)
 	if err != nil {
@@ -55,13 +56,13 @@ func (config Config) refreshToken() (string, error) {
 	}
 
 	loginPayloadReader := bytes.NewReader(loginPayload)
-	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodPost, config.BaseUrl+config.LoginPath, loginPayloadReader)
+	url := client.BaseUrl.ResolveReference(&client.LoginPath).String()
+	req, err := http.NewRequest(http.MethodPost, url, loginPayloadReader)
 	if err != nil {
 		return token, err
 	}
 
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return token, err
 	}
@@ -82,13 +83,18 @@ func (config Config) refreshToken() (string, error) {
 	return message.Auth.ClientToken, nil
 }
 
-func (config Config) FetchNewCertificate(certReq CertRequest) (CertResponse, error) {
+func (client Client) FetchNewCertificate(certReq CertRequest) (CertResponse, error) {
 	var message CertResponse
 
-	vaultToken, err := config.refreshToken()
+	vaultToken, err := client.refreshToken()
 	if err != nil {
 		return message, err
 	}
+
+	return client.fetchNewCertificate(certReq, vaultToken)
+}
+func (client Client) fetchNewCertificate(certReq CertRequest, vaultToken string) (CertResponse, error) {
+	var message CertResponse
 
 	certPayload, err := json.Marshal(certReq)
 	if err != nil {
@@ -96,15 +102,15 @@ func (config Config) FetchNewCertificate(certReq CertRequest) (CertResponse, err
 	}
 
 	certPayloadReader := bytes.NewReader(certPayload)
-	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodPost, config.BaseUrl+config.CertPath, certPayloadReader)
+	url := client.BaseUrl.ResolveReference(&client.CertPath).String()
+	req, err := http.NewRequest(http.MethodPost, url, certPayloadReader)
 	if err != nil {
 		return message, err
 	}
 
 	req.Header.Add("X-Vault-Token", vaultToken)
 
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return message, err
 	}

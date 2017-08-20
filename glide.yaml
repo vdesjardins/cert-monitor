@@ -1,3 +1,0 @@
-package: github.com/vdesjardins/cert-monitor
-import:
-- package: gopkg.in/yaml.v2

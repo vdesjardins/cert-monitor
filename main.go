@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 
-	"github.com/vdesjardins/cert-monitor/src/controller"
+	"github.com/vdesjardins/cert-monitor/controller"
 )
 
 var (

@@ -1,0 +1,21 @@
+{
+  "auth": {
+    "renewable": true,
+    "lease_duration": 2764800,
+    "metadata": {},
+    "policies": [
+      "default",
+      "dev-policy",
+      "test-policy"
+    ],
+    "accessor": "5d7fb475-07cb-4060-c2de-1ca3fcbf0c56",
+    "client_token": "98a4c7ab-b1fe-361b-ba0b-e307aacfd587"
+  },
+  "warnings": null,
+  "wrap_info": null,
+  "data": null,
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": "",
+  "request_id": "988fb8db-ce3b-0167-0ac7-1a568b902d75"
+}

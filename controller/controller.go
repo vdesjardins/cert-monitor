@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -17,8 +18,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vdesjardins/cert-monitor/src/config"
-	"github.com/vdesjardins/cert-monitor/src/vault"
+	"github.com/vdesjardins/cert-monitor/config"
+	"github.com/vdesjardins/cert-monitor/vault"
 )
 
 const (
@@ -89,7 +90,11 @@ func loadConfig(configPath string) (*config.MainConfig, error) {
 func execute(cfg *config.MainConfig, noReload bool) {
 	certConfigs := config.LoadConfigDir(*cfg)
 
-	vaultCfg := initVaultConfig(*cfg)
+	vaultCfg, err := initVaultClient(*cfg)
+	if err != nil {
+		log.Printf("%+v\n", err)
+		return
+	}
 
 	servicesToRestart := map[string]bool{}
 
@@ -123,14 +128,27 @@ func execute(cfg *config.MainConfig, noReload bool) {
 	}
 }
 
-func initVaultConfig(mainConfig config.MainConfig) vault.Config {
-	return vault.Config{
-		BaseUrl:   mainConfig.Vault.BaseUrl,
-		CertPath:  mainConfig.Vault.CertPath,
-		LoginPath: mainConfig.Vault.LoginPath,
+func initVaultClient(mainConfig config.MainConfig) (*vault.Client, error) {
+	baseUrl, err := url.Parse(mainConfig.Vault.BaseUrl)
+	if err != nil {
+		return nil, err
+	}
+	certPath, err := url.Parse(mainConfig.Vault.CertPath)
+	if err != nil {
+		return nil, err
+	}
+	loginPath, err := url.Parse(mainConfig.Vault.LoginPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &vault.Client{
+		BaseUrl:   *baseUrl,
+		CertPath:  *certPath,
+		LoginPath: *loginPath,
 		RoleId:    mainConfig.Vault.RoleId,
 		SecretId:  mainConfig.Vault.SecretId,
-	}
+	}, nil
 }
 func initCertRequest(certConfig config.CertConfig) vault.CertRequest {
 	certRequest := vault.CertRequest{}
