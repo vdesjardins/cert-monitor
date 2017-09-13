@@ -27,12 +27,12 @@ vault mount pki
 vault mount-tune -max-lease-ttl=87600h pki
 vault write pki/root/generate/internal common_name=webserver ttl=87600h
 vault write pki/config/urls issuing_certificates="http://127.0.0.1:8200/v1/pki/ca" crl_distribution_points="http://127.0.0.1:8200/v1/pki/crl"
-vault write pki/roles/webservers allowed_domains=capitale.qc.ca,lacapitale.com,lacapitalefs.com,unicainsurance.com,lunique.qc.ca,penncorp.ca,york-fire.com allow_subdomains="true" max_ttl="72h" client_flag=false key_usage=DigitalSignature,KeyEncipherment
+vault write pki/roles/webservers allowed_domains=mydomain.local allow_subdomains="true" max_ttl="72h" client_flag=false key_usage=DigitalSignature,KeyEncipherment
 ```
 
 Generate a certificate
 ```bash
-vault write pki/issue/webservers common_name=s01-test-vince-test.web.capitale.qc.ca alt_names=n1-s01-test-vince-test.web.capitale.qc.ca
+vault write pki/issue/webservers common_name=s01-test-app-test.mydomain.local alt_names=n1-s01-test-app-test.mydomain.local
 ```
 
 Exemple: issue certificate using curl
@@ -40,8 +40,8 @@ Exemple: issue certificate using curl
 /tmp/payload.json:
 
 > {
->   "common_name": "test.mydomain.net",
->   "alt_names": "n1-test.mydomain.net"
+>   "common_name": "test.mydomain.local",
+>   "alt_names": "n1-test.mydomain.local"
 > }
 
 ```bash
