@@ -20,7 +20,7 @@ type MainConfig struct {
 		LoginPath string `yaml:"loginPath"`
 		CertPath  string `yaml:"certPath"`
 	} `yaml:"vault"`
-	IncludePath        string        `yaml:"includePath"`
+	IncludePaths       []string      `yaml:"includePaths"`
 	DownloadedCertPath string        `yaml:"downloadedCertPath"`
 	CheckInterval      time.Duration `yaml:"checkInterval"`
 }
@@ -35,7 +35,7 @@ type CertConfig struct {
 		File struct {
 			Type string      `yaml:"type"`
 			Name string      `yaml:"name"`
-			Perm os.FileMode `yaml:perm"`
+			Perm os.FileMode `yaml:"perm"`
 		} `yaml:"file"`
 		Items []string `yaml:"items"`
 	} `yaml:"output"`
@@ -83,48 +83,55 @@ func LoadMainConfig(configPath string) (*MainConfig, error) {
 
 	content, err := ioutil.ReadFile(configPath)
 	if err != nil {
+		log.Printf("Error reading file: %v", err)
 		return nil, err
 	}
-	if err := yaml.Unmarshal(content, &mainConfig); err != nil {
+	if err := yaml.UnmarshalStrict(content, &mainConfig); err != nil {
+		log.Printf("Error parsing YAML file: %v", err)
 		return nil, err
 	}
 
 	return &mainConfig, nil
 }
 
-func LoadConfigDir(mainConfig MainConfig) []CertConfig {
+func (mainConfig MainConfig) LoadConfigDirs() ([]CertConfig, error) {
 	var certConfigs = make([]CertConfig, 0, 10)
+	var retErr error
 
-	err := filepath.Walk(mainConfig.IncludePath, func(path string, info os.FileInfo, err error) error {
-		var certConfig = CertConfig{}
+	log.Printf("Loading certificate paths: %v", mainConfig.IncludePaths)
+	for _, path := range mainConfig.IncludePaths {
+		log.Printf("Loading certificate files from directory %s", path)
 
-		if err != nil {
-			log.Printf("Error reading file %s: %v", path, err)
-			return nil
-		}
+		err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+			var certConfig = CertConfig{}
 
-		if filepath.Ext(path) == ".yml" || filepath.Ext(path) == ".yaml" {
-			log.Printf("Loading file %s", path)
-			content, err := ioutil.ReadFile(path)
 			if err != nil {
 				log.Printf("Error reading file %s: %v", path, err)
-				return nil
+				return err
 			}
-			if err := yaml.Unmarshal(content, &certConfig); err != nil {
-				log.Printf("Error parsing YAML content for file %s: %v", path, err)
-				return nil
-			}
-			certConfigs = append(certConfigs, certConfig)
-		}
-		return nil
-	})
 
-	if err != nil {
-		log.Println("Error processing config directory %s %v", mainConfig.IncludePath, err)
-		return nil
+			if filepath.Ext(path) == ".yml" || filepath.Ext(path) == ".yaml" {
+				log.Printf("Loading file %s", path)
+				content, err := ioutil.ReadFile(path)
+				if err != nil {
+					log.Printf("Error reading file %s: %v", path, err)
+					return err
+				}
+				if err := yaml.UnmarshalStrict(content, &certConfig); err != nil {
+					log.Printf("Error parsing YAML content for file %s: %v", path, err)
+					return err
+				}
+				certConfigs = append(certConfigs, certConfig)
+			}
+			return nil
+		})
+
+		if err != nil {
+			retErr = err
+		}
 	}
 
-	return certConfigs
+	return certConfigs, retErr
 }
 
 func visitFile(path string, info os.FileInfo, err error) error {
@@ -136,7 +143,7 @@ func visitFile(path string, info os.FileInfo, err error) error {
 			log.Printf("Error reading file %s: %v", path, err)
 			return nil
 		}
-		if err := yaml.Unmarshal(content, &certConfig); err != nil {
+		if err := yaml.UnmarshalStrict(content, &certConfig); err != nil {
 			log.Printf("Error parsing YAML content for file %s: %v", path, err)
 			return nil
 		}

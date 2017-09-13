@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"os"
 
 	"github.com/vdesjardins/cert-monitor/controller"
 )
@@ -16,7 +17,9 @@ func main() {
 	flag.Parse()
 
 	if *oneTime == true {
-		controller.ExecOnce(*configPath, *noReload)
+		if err := controller.ExecOnce(*configPath, *noReload); err != nil {
+			os.Exit(1)
+		}
 	} else {
 		controller.ExecLoop(*configPath, *noReload)
 	}

@@ -29,12 +29,18 @@ const (
 	privateFileName   = "private.pem"
 )
 
-func ExecOnce(configPath string, noReload bool) {
+func ExecOnce(configPath string, noReload bool) error {
 	cfg, err := loadConfig(configPath)
-
-	if err == nil {
-		execute(cfg, noReload)
+	if err != nil {
+		return err
 	}
+
+	err = execute(cfg, noReload, true)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func ExecLoop(configPath string, noReload bool) {
@@ -49,7 +55,7 @@ func ExecLoop(configPath string, noReload bool) {
 			log.Fatalf("aborting! %v", err)
 		}
 
-		execute(cfg, noReload)
+		execute(cfg, noReload, false)
 
 		log.Printf("Check interval set to %v", cfg.CheckInterval)
 		ticker := time.Tick(cfg.CheckInterval)
@@ -66,7 +72,7 @@ func ExecLoop(configPath string, noReload bool) {
 			case <-ticker:
 				cfg, err := loadConfig(configPath)
 				if err == nil {
-					execute(cfg, noReload)
+					execute(cfg, noReload, false)
 				}
 			}
 
@@ -80,6 +86,7 @@ func loadConfig(configPath string) (*config.MainConfig, error) {
 
 	cfg, err := config.LoadMainConfig(configPath)
 	if err != nil {
+		log.Printf("Error loading main config'%s'.\n", configPath)
 		return nil, fmt.Errorf("Error loading main config: %v", err)
 	}
 	log.Printf("Main configuration '%s' loaded sucessefully.\n", configPath)
@@ -87,13 +94,16 @@ func loadConfig(configPath string) (*config.MainConfig, error) {
 	return cfg, nil
 }
 
-func execute(cfg *config.MainConfig, noReload bool) {
-	certConfigs := config.LoadConfigDir(*cfg)
+func execute(cfg *config.MainConfig, noReload bool, failOnError bool) error {
+	certConfigs, err := cfg.LoadConfigDirs()
+	if err != nil && failOnError == true {
+		return err
+	}
 
 	vaultCfg, err := initVaultClient(*cfg)
 	if err != nil {
 		log.Printf("%+v\n", err)
-		return
+		return err
 	}
 
 	servicesToRestart := map[string]bool{}
@@ -101,7 +111,7 @@ func execute(cfg *config.MainConfig, noReload bool) {
 	for _, certConfig := range certConfigs {
 		certReq := initCertRequest(certConfig)
 
-		if !isCertificateExpired(certConfig.CommonName, *cfg) {
+		if !isCertificateExpired(certConfig, *cfg) {
 			continue
 		}
 
@@ -126,6 +136,8 @@ func execute(cfg *config.MainConfig, noReload bool) {
 	for k, _ := range servicesToRestart {
 		restartService(k)
 	}
+
+	return nil
 }
 
 func initVaultClient(mainConfig config.MainConfig) (*vault.Client, error) {
@@ -212,7 +224,7 @@ func saveBundleFile(certConfig config.CertConfig, cert vault.CertResponse) error
 		case "chain":
 			content += cert.Data.Chain + "\n"
 		default:
-			return fmt.Errorf("Error: config output.items is invalid. Valid values are: certificate, privateKey, issuingCA, chain\n")
+			return fmt.Errorf("Error: config output.items is invalid. Valid values are: certificate, privateKey, issuingCa, chain\n")
 		}
 	}
 
@@ -263,11 +275,11 @@ func saveDownloadedFile(name string, content string, perm os.FileMode) error {
 	return nil
 }
 
-func isCertificateExpired(certName string, mainConfig config.MainConfig) bool {
-	certFile := path.Join(mainConfig.DownloadedCertPath, certName, certFileName)
+func isCertificateExpired(certConfig config.CertConfig, mainConfig config.MainConfig) bool {
+	certFile := path.Join(mainConfig.DownloadedCertPath, certConfig.CommonName, certFileName)
 
 	if _, err := os.Stat(certFile); err != nil {
-		log.Printf("Certificate file %s does not exist.\n", certFile)
+		log.Printf("Cached certificate file %s does not exist.\n", certFile)
 		return true
 	}
 
