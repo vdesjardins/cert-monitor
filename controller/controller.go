@@ -278,6 +278,11 @@ func saveDownloadedFile(name string, content string, perm os.FileMode) error {
 func isCertificateExpired(certConfig config.CertConfig, mainConfig config.MainConfig) bool {
 	certFile := path.Join(mainConfig.DownloadedCertPath, certConfig.CommonName, certFileName)
 
+	if _, err := os.Stat(certConfig.Output.File.Name); err != nil {
+		log.Printf("Output certificate file %s does not exist.\n", certConfig.Output.File.Name)
+		return true
+	}
+
 	if _, err := os.Stat(certFile); err != nil {
 		log.Printf("Cached certificate file %s does not exist.\n", certFile)
 		return true
