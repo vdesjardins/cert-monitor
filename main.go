@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	configPath = flag.String("config", "/etc/certmon.yml", "path to main configuration file")
+	configPath = flag.String("config", "/etc/cert-monitor.yml", "path to main configuration file")
 	oneTime    = flag.Bool("onetime", false, "refresh certificates without entering the endless loop")
 	noReload   = flag.Bool("noreload", false, "do not reload services associated with each certificate")
 )
