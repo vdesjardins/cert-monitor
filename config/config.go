@@ -26,11 +26,13 @@ type MainConfig struct {
 }
 
 type CertConfig struct {
-	CommonName     string   `yaml:"commonName"`
-	AlternateNames []string `yaml:"alternateNames"`
-	ReloadCommand  string   `yaml:"reloadCommand"`
-	User           string   `yaml:"user"`
-	Group          string   `yaml:"group"`
+	CommonName     string        `yaml:"commonName"`
+	AlternateNames []string      `yaml:"alternateNames"`
+	ReloadCommand  string        `yaml:"reloadCommand"`
+	User           string        `yaml:"user"`
+	Group          string        `yaml:"group"`
+	TTL            time.Duration `yaml:"ttl"`
+	RenewTTL       time.Duration `yaml:"renewTtl"`
 	Output         struct {
 		File struct {
 			Type string      `yaml:"type"`
@@ -76,6 +78,11 @@ func (c CertConfig) UserId() (string, error) {
 	}
 
 	return user.Uid, nil
+}
+
+func (c CertConfig) validate() error {
+	// TODO: implement
+	return nil
 }
 
 func LoadMainConfig(configPath string) (*MainConfig, error) {
@@ -132,6 +139,10 @@ func (mainConfig MainConfig) LoadConfigDirs(certConfigPath string) ([]CertConfig
 			if err := yaml.UnmarshalStrict(content, &certConfig); err != nil {
 				log.Printf("Error parsing YAML content for file %s: %v", file, err)
 				retErr = err
+				continue
+			}
+			if err := certConfig.validate(); err != nil {
+				log.Printf("Error validating certificate configuration %s: %v", file, err)
 				continue
 			}
 			certConfigs = append(certConfigs, certConfig)

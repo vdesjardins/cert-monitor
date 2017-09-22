@@ -167,6 +167,9 @@ func initCertRequest(certConfig config.CertConfig) vault.CertRequest {
 
 	certRequest.CommonName = certConfig.CommonName
 	certRequest.AlternateNames = strings.Join(certConfig.AlternateNames, ",")
+	if certConfig.TTL != 0 {
+		certRequest.TTL = fmt.Sprintf("%vh", certConfig.TTL.Hours())
+	}
 
 	return certRequest
 }
@@ -306,7 +309,7 @@ func isCertificateExpired(certConfig config.CertConfig, mainConfig config.MainCo
 		return true
 	}
 
-	cutoffTime := cert.NotAfter.Add(-24 * time.Hour)
+	cutoffTime := cert.NotAfter.Add(-certConfig.RenewTTL)
 
 	if time.Now().After(cutoffTime) {
 		log.Printf("Certificate expired: %v cert date: %v check date: %v\n", certFile, cert.NotAfter, cutoffTime)

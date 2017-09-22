@@ -22,6 +22,7 @@ type CertResponse struct {
 type CertRequest struct {
 	CommonName     string `json:"common_name"`
 	AlternateNames string `json:"alt_names"`
+	TTL            string `json:"ttl,omitempty"`
 }
 
 type Client struct {
