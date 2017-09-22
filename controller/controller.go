@@ -29,13 +29,13 @@ const (
 	privateFileName   = "private.pem"
 )
 
-func ExecOnce(configPath string, noReload bool) error {
+func ExecOnce(configPath string, noReload bool, certConfigPath string) error {
 	cfg, err := loadConfig(configPath)
 	if err != nil {
 		return err
 	}
 
-	err = execute(cfg, noReload, true)
+	err = execute(cfg, noReload, true, certConfigPath)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func ExecLoop(configPath string, noReload bool) {
 			log.Fatalf("aborting! %v", err)
 		}
 
-		execute(cfg, noReload, false)
+		execute(cfg, noReload, false, "")
 
 		log.Printf("Check interval set to %v", cfg.CheckInterval)
 		ticker := time.Tick(cfg.CheckInterval)
@@ -72,7 +72,7 @@ func ExecLoop(configPath string, noReload bool) {
 			case <-ticker:
 				cfg, err := loadConfig(configPath)
 				if err == nil {
-					execute(cfg, noReload, false)
+					execute(cfg, noReload, false, "")
 				}
 			}
 
@@ -94,9 +94,9 @@ func loadConfig(configPath string) (*config.MainConfig, error) {
 	return cfg, nil
 }
 
-func execute(cfg *config.MainConfig, noReload bool, failOnError bool) error {
-	certConfigs, err := cfg.LoadConfigDirs()
-	if err != nil && failOnError == true {
+func execute(cfg *config.MainConfig, noReload bool, failOnError bool, certConfigPath string) error {
+	certConfigs, err := cfg.LoadConfigDirs(certConfigPath)
+	if err != nil {
 		return err
 	}
 

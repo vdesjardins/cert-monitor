@@ -94,12 +94,17 @@ func LoadMainConfig(configPath string) (*MainConfig, error) {
 	return &mainConfig, nil
 }
 
-func (mainConfig MainConfig) LoadConfigDirs() ([]CertConfig, error) {
+func (mainConfig MainConfig) LoadConfigDirs(certConfigPath string) ([]CertConfig, error) {
 	var certConfigs = make([]CertConfig, 0, 10)
 	var retErr error
 
-	log.Printf("Loading certificate paths: %v", mainConfig.IncludePaths)
-	for _, path := range mainConfig.IncludePaths {
+	includePaths := mainConfig.IncludePaths
+	if certConfigPath != "" {
+		includePaths = []string{certConfigPath}
+	}
+
+	log.Printf("Loading certificate paths: %v", includePaths)
+	for _, path := range includePaths {
 		files, err := filepath.Glob(path)
 
 		if err != nil {
