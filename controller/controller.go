@@ -2,8 +2,6 @@ package controller
 
 import (
 	"bytes"
-	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -119,7 +117,7 @@ func checkCertificatesAndRenew(cfg *config.MainConfig, files []string, noReload,
 	servicesToRestart := map[string]bool{}
 
 	for _, f := range files {
-		certConfig, err := config.LoadCertConfig(f)
+		certConfig, err := cfg.LoadCertConfig(f)
 		if err != nil {
 			log.Println(err)
 			if failOnError == true {
@@ -130,7 +128,7 @@ func checkCertificatesAndRenew(cfg *config.MainConfig, files []string, noReload,
 
 		certReq := initCertRequest(certConfig)
 
-		if !isCertificateExpired(certConfig, *cfg) {
+		if !certConfig.IsExpired() {
 			continue
 		}
 
@@ -301,47 +299,6 @@ func saveDownloadedFile(name string, content string, perm os.FileMode) error {
 		return fmt.Errorf("Error: unable to write file %s: %v\n", name, err)
 	}
 	return nil
-}
-
-func isCertificateExpired(certConfig config.CertConfig, mainConfig config.MainConfig) bool {
-	certFile := path.Join(mainConfig.DownloadedCertPath, certConfig.CommonName, certFileName)
-
-	if _, err := os.Stat(certConfig.Output.File.Name); err != nil {
-		log.Printf("Output certificate file %s does not exist.\n", certConfig.Output.File.Name)
-		return true
-	}
-
-	if _, err := os.Stat(certFile); err != nil {
-		log.Printf("Cached certificate file %s does not exist.\n", certFile)
-		return true
-	}
-
-	content, err := ioutil.ReadFile(certFile)
-	if err != nil {
-		log.Printf("Error: reading file %s: %v\n", certFile, err)
-		return true
-	}
-
-	block, _ := pem.Decode([]byte(content))
-	if err != nil {
-		log.Printf("Error: failed to parse certificate PEM %s: %v\n", certFile, err)
-		return true
-	}
-
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		log.Printf("Error: failed to parse certificate X509 %s: %v\n", certFile, err)
-		return true
-	}
-
-	cutoffTime := cert.NotAfter.Add(-certConfig.RenewTTL)
-
-	if time.Now().After(cutoffTime) {
-		log.Printf("Certificate expired: %v cert date: %v check date: %v\n", certFile, cert.NotAfter, cutoffTime)
-		return true
-	}
-
-	return false
 }
 
 func restartService(command string) {

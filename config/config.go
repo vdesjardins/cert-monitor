@@ -1,14 +1,21 @@
 package config
 
 import (
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/user"
+	"path"
 	"path/filepath"
 	"time"
 
 	yaml "gopkg.in/yaml.v2"
+)
+
+const (
+	certFileName = "cert.pem"
 )
 
 type MainConfig struct {
@@ -44,6 +51,7 @@ type CertConfig struct {
 	TTL            time.Duration    `yaml:"ttl"`
 	RenewTTL       time.Duration    `yaml:"renewTtl"`
 	Output         CertConfigOutput `yaml:"output"`
+	mainConfig     *MainConfig
 }
 
 func (c CertConfig) GroupId() (string, error) {
@@ -153,8 +161,8 @@ func (m MainConfig) ResolveConfigDirs() ([]string, error) {
 	return dirs, nil
 }
 
-func LoadCertConfig(file string) (CertConfig, error) {
-	var certConfig = CertConfig{}
+func (m MainConfig) LoadCertConfig(file string) (CertConfig, error) {
+	var certConfig = CertConfig{mainConfig: &m}
 
 	content, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -168,4 +176,39 @@ func LoadCertConfig(file string) (CertConfig, error) {
 	}
 
 	return certConfig, nil
+}
+
+func (c CertConfig) IsExpired() bool {
+	certFile := path.Join(c.mainConfig.DownloadedCertPath, c.CommonName, certFileName)
+
+	if _, err := os.Stat(c.Output.File.Name); err != nil {
+		return true
+	}
+
+	if _, err := os.Stat(certFile); err != nil {
+		return true
+	}
+
+	content, err := ioutil.ReadFile(certFile)
+	if err != nil {
+		return true
+	}
+
+	block, _ := pem.Decode([]byte(content))
+	if err != nil {
+		return true
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return true
+	}
+
+	cutoffTime := cert.NotAfter.Add(-c.RenewTTL)
+
+	if time.Now().After(cutoffTime) {
+		return true
+	}
+
+	return false
 }
