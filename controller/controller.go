@@ -83,7 +83,6 @@ func ExecLoop(configPath string, noReload bool) {
 }
 
 func loadConfig(configPath string) (*config.MainConfig, error) {
-
 	cfg, err := config.LoadMainConfig(configPath)
 	if err != nil {
 		log.Printf("Error loading main config'%s'.\n", configPath)
@@ -95,11 +94,22 @@ func loadConfig(configPath string) (*config.MainConfig, error) {
 }
 
 func execute(cfg *config.MainConfig, noReload bool, failOnError bool, certConfigPath string) error {
-	certConfigs, err := cfg.LoadConfigDirs(certConfigPath)
-	if err != nil {
-		return err
+	if certConfigPath != "" {
+		return checkCertificatesAndRenew(cfg, []string{certConfigPath}, noReload, failOnError)
 	}
 
+	files, err := cfg.ResolveConfigDirs()
+	if err != nil {
+		fmt.Println(err)
+		if failOnError == true {
+			return err
+		}
+	}
+
+	return checkCertificatesAndRenew(cfg, files, noReload, failOnError)
+}
+
+func checkCertificatesAndRenew(cfg *config.MainConfig, files []string, noReload, failOnError bool) error {
 	vaultCfg, err := initVaultClient(*cfg)
 	if err != nil {
 		log.Printf("%+v\n", err)
@@ -108,7 +118,16 @@ func execute(cfg *config.MainConfig, noReload bool, failOnError bool, certConfig
 
 	servicesToRestart := map[string]bool{}
 
-	for _, certConfig := range certConfigs {
+	for _, f := range files {
+		certConfig, err := config.LoadCertConfig(f)
+		if err != nil {
+			log.Println(err)
+			if failOnError == true {
+				return err
+			}
+			continue
+		}
+
 		certReq := initCertRequest(certConfig)
 
 		if !isCertificateExpired(certConfig, *cfg) {
@@ -119,11 +138,17 @@ func execute(cfg *config.MainConfig, noReload bool, failOnError bool, certConfig
 		cert, err := vaultCfg.FetchNewCertificate(certReq)
 		if err != nil {
 			log.Printf("%+v\n", err)
+			if failOnError == true {
+				return err
+			}
 			continue
 		}
 
 		if err := persistCertificate(*cfg, certConfig, cert); err != nil {
 			log.Println(err)
+			if failOnError == true {
+				return err
+			}
 			continue
 		}
 

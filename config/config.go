@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -135,57 +134,38 @@ func LoadMainConfig(configPath string) (*MainConfig, error) {
 	return &mainConfig, nil
 }
 
-func (mainConfig MainConfig) LoadConfigDirs(certConfigPath string) ([]CertConfig, error) {
-	var certConfigs = make([]CertConfig, 0, 10)
-	var retErr error
+func (m MainConfig) ResolveConfigDirs() ([]string, error) {
+	var errorString string
+	var dirs []string
 
-	includePaths := mainConfig.IncludePaths
-	if certConfigPath != "" {
-		includePaths = []string{certConfigPath}
-	}
-
-	log.Printf("Loading certificate paths: %v", includePaths)
-	for _, path := range includePaths {
+	for _, path := range m.IncludePaths {
 		files, err := filepath.Glob(path)
 
 		if err != nil {
-			log.Printf("Error globbing path %s: %v", path, err)
-			continue
+			errorString = fmt.Sprintf("%vError reading glob path %v\n", errorString, path)
 		}
-
-		for _, file := range files {
-			log.Printf("Loading certificate file %s", file)
-
-			if filepath.Ext(file) != ".yml" && filepath.Ext(file) != ".yaml" {
-				log.Printf("Ignoring file %s", file)
-				continue
-			}
-
-			var certConfig = CertConfig{}
-
-			log.Printf("Loading file %s", file)
-			content, err := ioutil.ReadFile(file)
-			if err != nil {
-				log.Printf("Error reading file %s: %v", file, err)
-				retErr = err
-				continue
-			}
-			if err := yaml.UnmarshalStrict(content, &certConfig); err != nil {
-				log.Printf("Error parsing YAML content for file %s: %v", file, err)
-				retErr = err
-				continue
-			}
-			if err := certConfig.Validate(); err != nil {
-				log.Printf("Error validating certificate configuration %s: %v", file, err)
-				continue
-			}
-			certConfigs = append(certConfigs, certConfig)
-		}
-
-		if err != nil {
-			retErr = err
-		}
+		dirs = append(dirs, files...)
+	}
+	if errorString != "" {
+		return dirs, fmt.Errorf("Error loading config directories: %v", errorString)
 	}
 
-	return certConfigs, retErr
+	return dirs, nil
+}
+
+func LoadCertConfig(file string) (CertConfig, error) {
+	var certConfig = CertConfig{}
+
+	content, err := ioutil.ReadFile(file)
+	if err != nil {
+		return certConfig, fmt.Errorf("Error reading file '%v': %v", file, err)
+	}
+	if err := yaml.UnmarshalStrict(content, &certConfig); err != nil {
+		return certConfig, fmt.Errorf("Error parsing YAML content for file '%s': %v", file, err)
+	}
+	if err := certConfig.Validate(); err != nil {
+		return certConfig, fmt.Errorf("Error validating certificate configuration '%s': %v", file, err)
+	}
+
+	return certConfig, nil
 }
