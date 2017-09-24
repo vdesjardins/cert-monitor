@@ -168,7 +168,7 @@ func initCertRequest(certConfig config.CertConfig) vault.CertRequest {
 	certRequest.CommonName = certConfig.CommonName
 	certRequest.AlternateNames = strings.Join(certConfig.AlternateNames, ",")
 	if certConfig.TTL != 0 {
-		certRequest.TTL = fmt.Sprintf("%vh", certConfig.TTL.Hours())
+		certRequest.TTL = certConfig.TTL.String()
 	}
 
 	return certRequest
