@@ -12,11 +12,16 @@ var (
 	oneTime    = flag.Bool("onetime", false, "refresh certificates without entering the endless loop")
 	noReload   = flag.Bool("noreload", false, "do not reload services associated with each certificate")
 	certConfig = flag.String("certconfig", "", "path to a specific certificate configuration")
+	status     = flag.Bool("status", false, "print status of all certificates managed by cert-monitor")
 )
 
 func main() {
 	flag.Parse()
 
+	if *status == true {
+		controller.PrintStatus(*configPath)
+		os.Exit(0)
+	}
 	if *oneTime == true {
 		if err := controller.ExecOnce(*configPath, *noReload, *certConfig); err != nil {
 			os.Exit(1)

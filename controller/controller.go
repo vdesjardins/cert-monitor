@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"text/tabwriter"
 	"time"
 
 	"github.com/vdesjardins/cert-monitor/config"
@@ -83,6 +84,44 @@ func ExecLoop(configPath string, noReload bool) {
 	}()
 
 	wg.Wait()
+}
+
+func PrintStatus(configPath string) error {
+	cfg, err := loadConfig(configPath)
+	if err != nil {
+		log.Printf("%v", err)
+		return err
+	}
+
+	files, err := cfg.ResolveConfigDirs()
+	if err != nil {
+		log.Printf("%v", err)
+		return err
+	}
+
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
+
+	fmt.Fprintln(w, "Configuration\tTTL\tRenewTTL\tNot Before\tNot After")
+
+	for _, v := range files {
+		c, err := cfg.LoadCertConfig(v)
+		if err != nil {
+			fmt.Fprintf(w, "%v\t%v\t%v\t%v\t%v\n", v, "-", "-", "-", "-")
+			continue
+		}
+
+		cert, err := c.LoadCachedCertificate()
+		if err != nil {
+			fmt.Fprintf(w, "%v\t%v\t%v\t%v\t%v\n", v, c.TTL, c.RenewTTL, "-", "-")
+			continue
+		}
+		fmt.Fprintf(w, "%v\t%v\t%v\t%v\t%v\n", v, c.TTL, c.RenewTTL,
+			cert.NotBefore.Format(time.RFC3339), cert.NotAfter.Format(time.RFC3339))
+	}
+
+	w.Flush()
+
+	return nil
 }
 
 func loadConfig(configPath string) (*config.MainConfig, error) {
