@@ -101,22 +101,25 @@ func PrintStatus(configPath string) error {
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 
-	fmt.Fprintln(w, "Configuration\tTTL\tRenewTTL\tNot Before\tNot After")
+	fmt.Fprintln(w, "Configuration\tTTL\tRenewTTL\tNot Before\tRenew After\tNot After")
+	format := "%v\t%v\t%v\t%v\t%v\t%v\n"
 
 	for _, v := range files {
 		c, err := cfg.LoadCertConfig(v)
 		if err != nil {
-			fmt.Fprintf(w, "%v\t%v\t%v\t%v\t%v\n", v, "-", "-", "-", "-")
+			fmt.Fprintf(w, format, v, "-", "-", "-", "-", "-")
 			continue
 		}
 
 		cert, err := c.LoadCachedCertificate()
 		if err != nil {
-			fmt.Fprintf(w, "%v\t%v\t%v\t%v\t%v\n", v, c.TTL, c.RenewTTL, "-", "-")
+			fmt.Fprintf(w, format, v, c.TTL, c.RenewTTL, "-", "-", "-")
 			continue
 		}
-		fmt.Fprintf(w, "%v\t%v\t%v\t%v\t%v\n", v, c.TTL, c.RenewTTL,
-			cert.NotBefore.Format(time.RFC3339), cert.NotAfter.Format(time.RFC3339))
+		fmt.Fprintf(w, format, v, c.TTL, c.RenewTTL,
+			cert.NotBefore.Format(time.RFC3339),
+			cert.NotAfter.Add(-c.RenewTTL).Format(time.RFC3339),
+			cert.NotAfter.Format(time.RFC3339))
 	}
 
 	w.Flush()
