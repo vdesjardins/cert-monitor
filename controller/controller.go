@@ -32,6 +32,7 @@ func ExecOnce(configPath string, noReload bool, certConfigPath string) error {
 	if err != nil {
 		return err
 	}
+	log.Printf("Main configuration '%s' loaded sucessefully.\n", configPath)
 
 	err = execute(cfg, noReload, true, certConfigPath)
 	if err != nil {
@@ -52,6 +53,7 @@ func ExecLoop(configPath string, noReload bool) {
 		if err != nil {
 			log.Fatalf("aborting! %v", err)
 		}
+		log.Printf("Main configuration '%s' loaded sucessefully.\n", configPath)
 
 		execute(cfg, noReload, false, "")
 
@@ -69,9 +71,12 @@ func ExecLoop(configPath string, noReload bool) {
 				return
 			case <-ticker:
 				cfg, err := loadConfig(configPath)
-				if err == nil {
-					execute(cfg, noReload, false, "")
+				if err != nil {
+					log.Printf("%v\n", err)
+					continue
 				}
+				log.Printf("Main configuration '%s' loaded sucessefully.\n", configPath)
+				execute(cfg, noReload, false, "")
 			}
 
 		}
@@ -83,10 +88,8 @@ func ExecLoop(configPath string, noReload bool) {
 func loadConfig(configPath string) (*config.MainConfig, error) {
 	cfg, err := config.LoadMainConfig(configPath)
 	if err != nil {
-		log.Printf("Error loading main config'%s'.\n", configPath)
-		return nil, fmt.Errorf("Error loading main config: %v", err)
+		return nil, fmt.Errorf("Error loading main configuration: %v", err)
 	}
-	log.Printf("Main configuration '%s' loaded sucessefully.\n", configPath)
 
 	return cfg, nil
 }
@@ -132,10 +135,10 @@ func checkCertificatesAndRenew(cfg *config.MainConfig, files []string, noReload,
 			continue
 		}
 
-		log.Printf("Generating certificate for commonName %v AlternateNames %v", certConfig.CommonName, certConfig.AlternateNames)
+		log.Printf("Generating certificate for commonName %v alternateNames %v", certConfig.CommonName, certConfig.AlternateNames)
 		cert, err := vaultCfg.FetchNewCertificate(certReq)
 		if err != nil {
-			log.Printf("%+v\n", err)
+			log.Printf("%v", err)
 			if failOnError == true {
 				return err
 			}
@@ -143,7 +146,7 @@ func checkCertificatesAndRenew(cfg *config.MainConfig, files []string, noReload,
 		}
 
 		if err := persistCertificate(*cfg, certConfig, cert); err != nil {
-			log.Println(err)
+			log.Printf("Error saving new certificate: %v", err)
 			if failOnError == true {
 				return err
 			}

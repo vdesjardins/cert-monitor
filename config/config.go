@@ -179,27 +179,8 @@ func (m MainConfig) LoadCertConfig(file string) (CertConfig, error) {
 }
 
 func (c CertConfig) IsExpired() bool {
-	certFile := path.Join(c.mainConfig.DownloadedCertPath, c.CommonName, certFileName)
 
-	if _, err := os.Stat(c.Output.File.Name); err != nil {
-		return true
-	}
-
-	if _, err := os.Stat(certFile); err != nil {
-		return true
-	}
-
-	content, err := ioutil.ReadFile(certFile)
-	if err != nil {
-		return true
-	}
-
-	block, _ := pem.Decode([]byte(content))
-	if err != nil {
-		return true
-	}
-
-	cert, err := x509.ParseCertificate(block.Bytes)
+	cert, err := c.LoadCachedCertificate()
 	if err != nil {
 		return true
 	}
@@ -211,4 +192,33 @@ func (c CertConfig) IsExpired() bool {
 	}
 
 	return false
+}
+
+func (c CertConfig) LoadCachedCertificate() (*x509.Certificate, error) {
+	certFile := path.Join(c.mainConfig.DownloadedCertPath, c.CommonName, certFileName)
+
+	if _, err := os.Stat(c.Output.File.Name); err != nil {
+		return nil, err
+	}
+
+	if _, err := os.Stat(certFile); err != nil {
+		return nil, err
+	}
+
+	content, err := ioutil.ReadFile(certFile)
+	if err != nil {
+		return nil, err
+	}
+
+	block, _ := pem.Decode([]byte(content))
+	if err != nil {
+		return nil, err
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return cert, nil
 }
