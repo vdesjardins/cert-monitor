@@ -284,16 +284,21 @@ func saveBundleFile(certConfig config.CertConfig, cert vault.CertResponse) error
 
 	var content string
 
+	appendContent := func(str string) {
+		if str != "" {
+			content += str + "\n"
+		}
+	}
 	for _, v := range certConfig.Output.Items {
 		switch v {
 		case "certificate":
-			content += cert.Data.Certificate + "\n"
+			appendContent(cert.Data.Certificate)
 		case "privateKey":
-			content += cert.Data.PrivateKey + "\n"
+			appendContent(cert.Data.PrivateKey)
 		case "issuingCa":
-			content += cert.Data.IssuingCa + "\n"
+			appendContent(cert.Data.IssuingCa)
 		case "chain":
-			content += cert.Data.Chain + "\n"
+			appendContent(cert.Data.Chain)
 		default:
 			return fmt.Errorf("Error: config output.items is invalid. Valid values are: certificate, privateKey, issuingCa, chain\n")
 		}
