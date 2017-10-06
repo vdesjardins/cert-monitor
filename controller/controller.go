@@ -255,9 +255,14 @@ func persistCertificate(mainCfg config.MainConfig, certConfig config.CertConfig,
 	certBaseDir := path.Join(mainCfg.DownloadedCertPath, certConfig.CommonName)
 
 	checkError(path.Join(certBaseDir, certFileName), cert.Data.Certificate, certConfig, 0644)
-	checkError(path.Join(certBaseDir, chainFileName), cert.Data.Chain, certConfig, 0644)
 	checkError(path.Join(certBaseDir, issuingCAFileName), cert.Data.IssuingCa, certConfig, 0644)
 	checkError(path.Join(certBaseDir, privateFileName), cert.Data.PrivateKey, certConfig, 0600)
+
+	chain := ""
+	for _, v := range cert.Data.Chain {
+		chain += v + "\n"
+	}
+	checkError(path.Join(certBaseDir, chainFileName), chain, certConfig, 0644)
 
 	if err != nil {
 		return err
@@ -298,7 +303,9 @@ func saveBundleFile(certConfig config.CertConfig, cert vault.CertResponse) error
 		case "issuingCa":
 			appendContent(cert.Data.IssuingCa)
 		case "chain":
-			appendContent(cert.Data.Chain)
+			for _, v := range cert.Data.Chain {
+				appendContent(v)
+			}
 		default:
 			return fmt.Errorf("Error: config output.items is invalid. Valid values are: certificate, privateKey, issuingCa, chain\n")
 		}

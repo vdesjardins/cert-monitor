@@ -12,10 +12,10 @@ import (
 
 type CertResponse struct {
 	Data struct {
-		Chain       string `json:"ca_chain"`
-		Certificate string `json:"certificate"`
-		PrivateKey  string `json:"private_key"`
-		IssuingCa   string `json:"issuing_ca"`
+		Chain       []string `json:"ca_chain"`
+		Certificate string   `json:"certificate"`
+		PrivateKey  string   `json:"private_key"`
+		IssuingCa   string   `json:"issuing_ca"`
 	} `json:"data"`
 	Errors []string `json:"errors"`
 }
