@@ -8,6 +8,41 @@ Certificate monitoring process that :
 
 The certificate backend used is Hashicorp Vault.
 
+# Cert-Monitor Configuration
+Main configuration example:
+```yaml
+checkInterval: 60m
+downloadedCertPath: /var/cache/cert-monitor
+includePaths:
+- /etc/cert-monitor.d/*.yml
+vault:
+    baseUrl: http://127.0.0.1:8200
+    certPath: /v1/pki/issue/webservers
+    loginPath: /v1/auth/approle/login
+    roleId: <token elided>
+    secretId: <token elided>
+```
+
+Certificate check configuration example:
+```yaml
+commonName: n1-test.mydomain.com
+alternateNames: [ test.mydomain.com ]
+reloadCommand: /usr/sbin/apachectl graceful
+user: nobody
+group: nobody
+ttl: 1344h
+renewTtl: 672h
+output:
+  file:
+    type: bundle
+    name: /etc/httpd/conf.d/n1-test.mydomain.net.pem
+    perm: 0600
+  items:
+    - certificate
+    - chain
+    - privateKey
+```
+
 # Testing
 Basic Vault configuration example.
 
@@ -72,7 +107,6 @@ Generate secret_id
 ```bash
 vault write -f auth/approle/role/testrole/secret-id
 ```
-
 # TODO:
 - Testing
 - Refactoring to support other backends (CFSSL?)
