@@ -16,6 +16,8 @@ func (t *mockTransport) RoundTrip(request *http.Request) (*http.Response, error)
 	switch request.URL.Path {
 	case "/certs":
 		return t.handleCertRequest(request)
+	case "/certs/404":
+		return t.handleCertRequest404(request)
 	case "/login":
 		return t.handleRefreshToken(request)
 	default:
@@ -32,6 +34,15 @@ func (t *mockTransport) handleCertRequest(request *http.Request) (*http.Response
 	response := http.Response{}
 	response.Body = ioutil.NopCloser(bytes.NewReader(content))
 	response.StatusCode = 200
+	return &response, nil
+}
+
+func (t *mockTransport) handleCertRequest404(request *http.Request) (*http.Response, error) {
+	content := []byte("")
+
+	response := http.Response{}
+	response.Body = ioutil.NopCloser(bytes.NewReader(content))
+	response.StatusCode = 404
 	return &response, nil
 }
 
@@ -98,6 +109,13 @@ func TestFetchNewCertificate(t *testing.T) {
 	_, err := config.fetchNewCertificate(certReq, vaultToken)
 	if err != nil {
 		t.Errorf("Error %v", err)
+	}
+
+	certPath, _ = url.Parse("/certs/404")
+	config.CertPath = *certPath
+	_, err = config.fetchNewCertificate(certReq, vaultToken)
+	if err == nil {
+		t.Errorf("Error status code 404 is supposed the be an error")
 	}
 
 	http.DefaultClient = savedDefaultClient

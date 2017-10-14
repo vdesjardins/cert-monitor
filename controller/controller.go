@@ -153,7 +153,7 @@ func execute(cfg *config.MainConfig, noReload bool, failOnError bool, certConfig
 }
 
 func checkCertificatesAndRenew(cfg *config.MainConfig, files []string, noReload, failOnError bool) error {
-	vaultCfg, err := initVaultClient(*cfg)
+	vaultClient, err := initVaultClient(*cfg)
 	if err != nil {
 		log.Printf("%+v\n", err)
 		return err
@@ -171,24 +171,14 @@ func checkCertificatesAndRenew(cfg *config.MainConfig, files []string, noReload,
 			continue
 		}
 
-		certReq := initCertRequest(certConfig)
-
 		if !certConfig.IsExpired() {
 			continue
 		}
 
 		log.Printf("Generating certificate for commonName %v alternateNames %v", certConfig.CommonName, certConfig.AlternateNames)
-		cert, err := vaultCfg.FetchNewCertificate(certReq)
+		err = renewCertificate(certConfig, vaultClient)
 		if err != nil {
-			log.Printf("%v", err)
-			if failOnError == true {
-				return err
-			}
-			continue
-		}
-
-		if err := persistCertificate(*cfg, certConfig, cert); err != nil {
-			log.Printf("Error saving new certificate: %v", err)
+			log.Println(err)
 			if failOnError == true {
 				return err
 			}
@@ -203,6 +193,21 @@ func checkCertificatesAndRenew(cfg *config.MainConfig, files []string, noReload,
 	// restart services
 	for k, _ := range servicesToRestart {
 		restartService(k)
+	}
+
+	return nil
+}
+
+func renewCertificate(certConfig config.CertConfig, vaultClient *vault.Client) error {
+	certReq := initCertRequest(certConfig)
+
+	cert, err := vaultClient.FetchNewCertificate(certReq)
+	if err != nil {
+		return fmt.Errorf("Error fetching new certificate: %v", err)
+	}
+
+	if err := persistCertificate(certConfig, cert); err != nil {
+		return fmt.Errorf("Error saving new certificate: %v", err)
 	}
 
 	return nil
@@ -242,7 +247,7 @@ func initCertRequest(certConfig config.CertConfig) vault.CertRequest {
 	return certRequest
 }
 
-func persistCertificate(mainCfg config.MainConfig, certConfig config.CertConfig, cert vault.CertResponse) error {
+func persistCertificate(certConfig config.CertConfig, cert vault.CertResponse) error {
 	var err error
 
 	checkError := func(name string, content string, certConfig config.CertConfig, perm os.FileMode) {
@@ -252,7 +257,7 @@ func persistCertificate(mainCfg config.MainConfig, certConfig config.CertConfig,
 		err = saveDownloadedFile(name, content, perm)
 	}
 
-	certBaseDir := path.Join(mainCfg.DownloadedCertPath, certConfig.CommonName)
+	certBaseDir := path.Join(certConfig.MainConfig.DownloadedCertPath, certConfig.CommonName)
 
 	checkError(path.Join(certBaseDir, certFileName), cert.Data.Certificate, certConfig, 0644)
 	checkError(path.Join(certBaseDir, issuingCAFileName), cert.Data.IssuingCa, certConfig, 0644)

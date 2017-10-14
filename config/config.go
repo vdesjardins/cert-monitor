@@ -18,14 +18,16 @@ const (
 	certFileName = "cert.pem"
 )
 
+type VaultConfig struct {
+	RoleId    string `yaml:"roleId"`
+	SecretId  string `yaml:"secretId"`
+	BaseUrl   string `yaml:"baseUrl"`
+	LoginPath string `yaml:"loginPath"`
+	CertPath  string `yaml:"certPath"`
+}
+
 type MainConfig struct {
-	Vault struct {
-		RoleId    string `yaml:"roleId"`
-		SecretId  string `yaml:"secretId"`
-		BaseUrl   string `yaml:"baseUrl"`
-		LoginPath string `yaml:"loginPath"`
-		CertPath  string `yaml:"certPath"`
-	} `yaml:"vault"`
+	Vault              VaultConfig   `yaml:"vault"`
 	IncludePaths       []string      `yaml:"includePaths"`
 	DownloadedCertPath string        `yaml:"downloadedCertPath"`
 	CheckInterval      time.Duration `yaml:"checkInterval"`
@@ -51,7 +53,7 @@ type CertConfig struct {
 	TTL            time.Duration    `yaml:"ttl"`
 	RenewTTL       time.Duration    `yaml:"renewTtl"`
 	Output         CertConfigOutput `yaml:"output"`
-	mainConfig     *MainConfig
+	MainConfig     *MainConfig
 }
 
 func (c CertConfig) GroupId() (string, error) {
@@ -162,7 +164,7 @@ func (m MainConfig) ResolveConfigDirs() ([]string, error) {
 }
 
 func (m MainConfig) LoadCertConfig(file string) (CertConfig, error) {
-	var certConfig = CertConfig{mainConfig: &m}
+	var certConfig = CertConfig{MainConfig: &m}
 
 	content, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -195,7 +197,7 @@ func (c CertConfig) IsExpired() bool {
 }
 
 func (c CertConfig) LoadCachedCertificate() (*x509.Certificate, error) {
-	certFile := path.Join(c.mainConfig.DownloadedCertPath, c.CommonName, certFileName)
+	certFile := path.Join(c.MainConfig.DownloadedCertPath, c.CommonName, certFileName)
 
 	if _, err := os.Stat(c.Output.File.Name); err != nil {
 		return nil, err
