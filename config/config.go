@@ -60,7 +60,7 @@ func (c CertConfig) GroupId() (string, error) {
 	if c.Group != "" {
 		group, err := user.LookupGroup(c.Group)
 		if err != nil {
-			return "", fmt.Errorf("Error: %v", err)
+			return "", fmt.Errorf("Error looking up for group %v: %v", c.Group, err)
 		}
 
 		return group.Gid, nil
@@ -68,7 +68,7 @@ func (c CertConfig) GroupId() (string, error) {
 
 	group, err := user.Current()
 	if err != nil {
-		return "", fmt.Errorf("Error: %v", err)
+		return "", fmt.Errorf("Error getting daemon user: %v", err)
 	}
 
 	return group.Gid, nil
@@ -79,7 +79,7 @@ func (c CertConfig) UserId() (string, error) {
 	if c.User != "" {
 		user, err := user.Lookup(c.User)
 		if err != nil {
-			return "", fmt.Errorf("Error: %v", err)
+			return "", fmt.Errorf("Error looking up user %v: %v", c.User, err)
 		}
 
 		return user.Uid, nil
@@ -87,7 +87,7 @@ func (c CertConfig) UserId() (string, error) {
 
 	user, err := user.Current()
 	if err != nil {
-		return "", fmt.Errorf("Error: %v", err)
+		return "", fmt.Errorf("Error getting daemon user: %v", err)
 	}
 
 	return user.Uid, nil
@@ -135,10 +135,10 @@ func LoadMainConfig(configPath string) (*MainConfig, error) {
 
 	content, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error reading config file %v: %v", configPath, err)
 	}
 	if err := yaml.UnmarshalStrict(content, &mainConfig); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error parsing YAML config file %v: %v", configPath, err)
 	}
 
 	return &mainConfig, nil

@@ -155,7 +155,7 @@ func execute(cfg *config.MainConfig, noReload bool, failOnError bool, certConfig
 func checkCertificatesAndRenew(cfg *config.MainConfig, files []string, noReload, failOnError bool) error {
 	vaultClient, err := initVaultClient(*cfg)
 	if err != nil {
-		log.Printf("%+v\n", err)
+		log.Printf("%+v", err)
 		return err
 	}
 
@@ -216,15 +216,15 @@ func renewCertificate(certConfig config.CertConfig, vaultClient *vault.Client) e
 func initVaultClient(mainConfig config.MainConfig) (*vault.Client, error) {
 	baseUrl, err := url.Parse(mainConfig.Vault.BaseUrl)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Unable to parse Vault base URL %v: %v", mainConfig.Vault.BaseUrl, err)
 	}
 	certPath, err := url.Parse(mainConfig.Vault.CertPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Unable to parse Vault certificate URL path %v: %v", mainConfig.Vault.CertPath, err)
 	}
 	loginPath, err := url.Parse(mainConfig.Vault.LoginPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Unable to parse Vault login URL path %v: %v", mainConfig.Vault.LoginPath, err)
 	}
 
 	return &vault.Client{
@@ -255,6 +255,9 @@ func persistCertificate(certConfig config.CertConfig, cert vault.CertResponse) e
 			return
 		}
 		err = saveDownloadedFile(name, content, perm)
+		if err != nil {
+			err = fmt.Errorf("Error saving downloaded certificate information in cache file %v: %v", name, err)
+		}
 	}
 
 	certBaseDir := path.Join(certConfig.MainConfig.DownloadedCertPath, certConfig.CommonName)
