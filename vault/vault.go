@@ -120,15 +120,15 @@ func (client Client) fetchNewCertificate(certReq CertRequest, vaultToken string)
 	}
 	defer resp.Body.Close()
 
+	err = json.NewDecoder(resp.Body).Decode(&message)
+
 	if resp.StatusCode != 200 {
-		err := json.NewDecoder(resp.Body).Decode(&message)
 		if err != nil {
-			return message, fmt.Errorf("Fetch certificate: Error: vault status: %d errors: %v", resp.StatusCode, message.Errors)
+			return message, fmt.Errorf("Fetch certificate: Error: vault status: %d", resp.StatusCode)
 		}
-		return message, fmt.Errorf("Fetch certificate: Error: vault status: %d", resp.StatusCode)
+		return message, fmt.Errorf("Fetch certificate: Error: vault status: %d errors: %v", resp.StatusCode, message.Errors)
 	}
 
-	err = json.NewDecoder(resp.Body).Decode(&message)
 	if err != nil {
 		return message, fmt.Errorf("Fetch certificate: Error reading Vault response: %v", err)
 	}
