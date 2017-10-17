@@ -369,6 +369,7 @@ func saveDownloadedFile(name string, content string, perm os.FileMode) error {
 func restartService(command string) {
 	if command == "" {
 		log.Printf("No reload command specified. Skipping.\n")
+		return
 	}
 
 	log.Printf("Executing command `%v'\n", command)
