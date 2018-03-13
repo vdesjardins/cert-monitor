@@ -213,8 +213,8 @@ func (c CertConfig) LoadCachedCertificate() (*x509.Certificate, error) {
 	}
 
 	block, _ := pem.Decode([]byte(content))
-	if err != nil {
-		return nil, err
+	if block == nil {
+		return nil, fmt.Errorf("Error decoding PEM of cached certificate %s", certFile)
 	}
 
 	cert, err := x509.ParseCertificate(block.Bytes)
