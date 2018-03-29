@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/vdesjardins/cert-monitor.svg?branch=master)](https://travis-ci.org/vdesjardins/cert-monitor)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fvdesjardins%2Fcert-monitor.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fvdesjardins%2Fcert-monitor?ref=badge_shield)
 
 #WIP
 
@@ -113,3 +114,7 @@ vault write -f auth/approle/role/testrole/secret-id
 - Testing
 - Refactoring to support other backends (CFSSL?)
 
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fvdesjardins%2Fcert-monitor.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fvdesjardins%2Fcert-monitor?ref=badge_large)
